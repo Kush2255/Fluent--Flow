@@ -7,11 +7,11 @@ type OrbState = "idle" | "listening" | "processing" | "suggesting";
 
 const FloatingOrb = () => {
   const [state, setState] = useState<OrbState>("idle");
-  const [suggestionText, setSuggestionText] = useState<string | null>(null);
+  const [suggestionText, setSuggestionText] = useState<string>("");
   const [permissionDenied, setPermissionDenied] = useState(false);
 
   const constraintsRef = useRef<HTMLDivElement>(null);
-  const lastProcessedTranscript = useRef("");
+  const lastProcessedTranscript = useRef<string>("");
 
   const {
     transcript,
@@ -30,48 +30,53 @@ const FloatingOrb = () => {
   const currentTranscript =
     transcript + (interimTranscript ? " " + interimTranscript : "");
 
-  // Call YOUR backend API (NOT OpenAI)
+  // 🔹 CALL BACKEND API (SAFE)
   const callBackend = async (text: string) => {
     try {
       setState("processing");
 
       const response = await fetch("/api/respond", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: text }),
       });
 
       const resultText = await response.text();
-      setSuggestionText(resultText);
+
+      // 🔐 SAFETY GUARD (PREVENTS REACT CRASH)
+      if (typeof resultText !== "string" || resultText.trim().length === 0) {
+        setSuggestionText("Wait and listen for a moment.");
+      } else {
+        setSuggestionText(resultText.trim());
+      }
+
       setState("suggesting");
 
       setTimeout(() => {
         if (isListening) setState("listening");
       }, 5000);
-    } catch (err) {
-      console.error("Backend error:", err);
-      setState("listening");
+    } catch (error) {
+      console.error("Backend error:", error);
+      setSuggestionText("Wait and listen for a moment.");
+      setState("suggesting");
     }
   };
 
-  // Process only NEW transcript
+  // 🔹 Process ONLY new transcript
   useEffect(() => {
-    const trimmed = transcript.trim();
+    const cleaned = transcript.trim();
 
     if (
       state === "listening" &&
-      trimmed.length > 5 &&
-      trimmed !== lastProcessedTranscript.current
+      cleaned.length > 5 &&
+      cleaned !== lastProcessedTranscript.current
     ) {
-      lastProcessedTranscript.current = trimmed;
-      setSuggestionText(null);
-      callBackend(trimmed);
+      lastProcessedTranscript.current = cleaned;
+      callBackend(cleaned);
     }
   }, [transcript, state]);
 
-  // Sync orb state
+  // 🔹 Sync listening state
   useEffect(() => {
     if (isListening && state === "idle") setState("listening");
     if (!isListening && state !== "idle") setState("idle");
@@ -91,7 +96,7 @@ const FloatingOrb = () => {
     } else {
       stopListening();
       setState("idle");
-      setSuggestionText(null);
+      setSuggestionText("");
       lastProcessedTranscript.current = "";
     }
   }, [state]);
@@ -128,7 +133,7 @@ const FloatingOrb = () => {
             {state === "suggesting" && <Volume2 className="text-blue-400" />}
           </motion.button>
 
-          {/* Suggestion popup (ONLY ONE SENTENCE) */}
+          {/* 🔹 POPUP (ONE SENTENCE ONLY) */}
           <AnimatePresence>
             {state === "suggesting" && suggestionText && (
               <motion.div
@@ -139,7 +144,7 @@ const FloatingOrb = () => {
               >
                 <div className="glass rounded-xl p-3">
                   <p className="text-sm leading-relaxed">
-                    {suggestionText}
+                    {typeof suggestionText === "string" ? suggestionText : ""}
                   </p>
                 </div>
               </motion.div>
