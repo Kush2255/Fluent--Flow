@@ -30,7 +30,7 @@ const FloatingOrb = () => {
   const currentTranscript =
     transcript + (interimTranscript ? " " + interimTranscript : "");
 
-  // 🔹 CALL BACKEND API (SAFE)
+  // ✅ CALL YOUR BACKEND ONLY
   const callBackend = async (text: string) => {
     try {
       setState("processing");
@@ -43,7 +43,6 @@ const FloatingOrb = () => {
 
       const resultText = await response.text();
 
-      // 🔐 SAFETY GUARD (PREVENTS REACT CRASH)
       if (typeof resultText !== "string" || resultText.trim().length === 0) {
         setSuggestionText("Wait and listen for a moment.");
       } else {
@@ -55,14 +54,14 @@ const FloatingOrb = () => {
       setTimeout(() => {
         if (isListening) setState("listening");
       }, 5000);
-    } catch (error) {
-      console.error("Backend error:", error);
+    } catch (err) {
+      console.error("Backend error:", err);
       setSuggestionText("Wait and listen for a moment.");
       setState("suggesting");
     }
   };
 
-  // 🔹 Process ONLY new transcript
+  // Process only NEW transcript
   useEffect(() => {
     const cleaned = transcript.trim();
 
@@ -76,7 +75,7 @@ const FloatingOrb = () => {
     }
   }, [transcript, state]);
 
-  // 🔹 Sync listening state
+  // Sync orb state
   useEffect(() => {
     if (isListening && state === "idle") setState("listening");
     if (!isListening && state !== "idle") setState("idle");
@@ -133,7 +132,6 @@ const FloatingOrb = () => {
             {state === "suggesting" && <Volume2 className="text-blue-400" />}
           </motion.button>
 
-          {/* 🔹 POPUP (ONE SENTENCE ONLY) */}
           <AnimatePresence>
             {state === "suggesting" && suggestionText && (
               <motion.div
@@ -144,7 +142,7 @@ const FloatingOrb = () => {
               >
                 <div className="glass rounded-xl p-3">
                   <p className="text-sm leading-relaxed">
-                    {typeof suggestionText === "string" ? suggestionText : ""}
+                    {suggestionText}
                   </p>
                 </div>
               </motion.div>
